@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import Count, Avg
+from datetime import datetime, timedelta
 
 # Create your models here.
 
@@ -40,5 +42,28 @@ class HistoricalPerformance(models.Model):
     average_response_time = models.FloatField()
     fulfillment_rate = models.FloatField()
 
+    def calculate_performance_metrics(self):
+    
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        historical_data = HistoricalPerformance.objects.filter(
+            vendor=self,
+            date__gte=thirty_days_ago
+        )
+
+        
+        total_records = historical_data.count()
+        on_time_delivery_rate = historical_data.filter(on_time_delivery_rate__gte=95).count() / total_records * 100 if total_records > 0 else 0
+        quality_rating_avg = historical_data.aggregate(Avg('quality_rating_avg'))['quality_rating_avg__avg'] if total_records > 0 else 0
+        average_response_time = historical_data.aggregate(Avg('average_response_time'))['average_response_time__avg'] if total_records > 0 else 0
+        fulfillment_rate = historical_data.filter(fulfillment_rate__gte=95).count() / total_records * 100 if total_records > 0 else 0
+
+       
+        metrics = {
+            'on_time_delivery_rate': on_time_delivery_rate,
+            'quality_rating_avg': quality_rating_avg,
+            'average_response_time': average_response_time,
+            'fulfillment_rate': fulfillment_rate,
+        }
+        return metrics
     def __str__(self):
         return f"{self.vendor} - {self.date}"
