@@ -43,21 +43,28 @@ class HistoricalPerformance(models.Model):
     fulfillment_rate = models.FloatField()
 
     def calculate_performance_metrics(self):
-    
         thirty_days_ago = datetime.now() - timedelta(days=30)
-        historical_data = HistoricalPerformance.objects.filter(
+        completed_pos = PurchaseOrder.objects.filter(
             vendor=self,
-            date__gte=thirty_days_ago
+            status='completed',
+            delivery_date__lte=('2023-01-01T12:00:00Z'),
+            acknowledgment_date__isnull=False
         )
+        total_completed_pos = completed_pos.count()
+        on_time_delivery_rate = (total_completed_pos / completed_pos.count()) * 100 if total_completed_pos > 0 else 0
 
-        
-        total_records = historical_data.count()
-        on_time_delivery_rate = historical_data.filter(on_time_delivery_rate__gte=95).count() / total_records * 100 if total_records > 0 else 0
-        quality_rating_avg = historical_data.aggregate(Avg('quality_rating_avg'))['quality_rating_avg__avg'] if total_records > 0 else 0
-        average_response_time = historical_data.aggregate(Avg('average_response_time'))['average_response_time__avg'] if total_records > 0 else 0
-        fulfillment_rate = historical_data.filter(fulfillment_rate__gte=95).count() / total_records * 100 if total_records > 0 else 0
+        completed_pos_with_rating = completed_pos.exclude(quality_rating__isnull=True)
+        quality_rating_avg = completed_pos_with_rating.aggregate(Avg('quality_rating'))['quality_rating__avg'] if completed_pos_with_rating.count() > 0 else 0
 
-       
+        acknowledgment_times = completed_pos.values('acknowledgment_date', 'issue_date')
+        average_response_time = (
+            sum((item['acknowledgment_date'] - item['issue_date']).total_seconds() / 60 for item in acknowledgment_times) /
+            len(acknowledgment_times)
+        ) if len(acknowledgment_times) > 0 else 0
+
+        successful_fulfillments = completed_pos.filter(issues__isnull=True)
+        fulfillment_rate = (successful_fulfillments.count() / total_completed_pos) * 100 if total_completed_pos > 0 else 0
+
         metrics = {
             'on_time_delivery_rate': on_time_delivery_rate,
             'quality_rating_avg': quality_rating_avg,
@@ -65,5 +72,3 @@ class HistoricalPerformance(models.Model):
             'fulfillment_rate': fulfillment_rate,
         }
         return metrics
-    def __str__(self):
-        return f"{self.vendor} - {self.date}"

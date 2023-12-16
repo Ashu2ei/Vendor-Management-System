@@ -27,7 +27,7 @@ class VendorPerformanceView(generics.RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         vendor = self.get_object()
-        performance_metrics = vendor.calculate_performance_metrics()
+        performance_metrics = HistoricalPerformance.calculate_performance_metrics(self)
         serializer = self.get_serializer(performance_metrics)
         return Response(serializer.data)
 
