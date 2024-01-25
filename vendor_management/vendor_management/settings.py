@@ -56,7 +56,7 @@ ROOT_URLCONF = 'vendor_management.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR,'templates')],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -70,7 +70,9 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'vendor_management.wsgi.application'
-
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'vendor_management', 'static'),
+]
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
